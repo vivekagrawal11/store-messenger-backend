@@ -27,12 +27,14 @@ const webhookRoutes = require("./routes/webhook.routes");
 const chatRoutes = require("./routes/chat.routes");
 const agentRoutes = require("./routes/agent.routes");
 const storeRoutes = require("./routes/store.routes");
+const siteConfigRoutes = require("./routes/siteConfig.routes");
 
 app.use("/api/auth", authRoutes);
 app.use("/", webhookRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/agents", agentRoutes);
 app.use("/api/stores", storeRoutes);
+app.use("/api/config", siteConfigRoutes);
 webhookController.setSocket(io);
 // Initialize Socket.IO
 initSocket(io);
