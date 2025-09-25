@@ -36,7 +36,7 @@ const SiteConfig = sequelize.define(
     }
   },
   {
-    tableName: "site_sonfig", // your actual table name
+    tableName: "site_config", // your actual table name
     timestamps: false          // since you only have created_at
   }
 );
