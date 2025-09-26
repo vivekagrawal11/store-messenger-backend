@@ -1,13 +1,31 @@
-const User = require("../models/user.model");
+const { User, Store } = require("../models"); // Import models from index.js
 const bcrypt = require('bcrypt');
 
 module.exports = {
 
-  // Get all agents
+  // Get all agents with their stores
   getAgents: async (req, res) => {
     try {
-      const agents = await User.findAll({ where: { role: 'agent' } });
-      res.json(agents);
+      const agents = await User.findAll({
+        where: { role: 'agent' },
+        include: {
+          model: Store,
+          attributes: ['id'], // only fetch store IDs
+          through: { attributes: [] } // remove pivot table fields
+        }
+      });
+
+      // Map each agent to include only store_ids array
+      const agentsWithStoreIds = agents.map(agent => ({
+        id: agent.id,
+        name: agent.name,
+        email: agent.email,
+        role: agent.role,
+        store_ids: agent.Stores ? agent.Stores.map(s => s.id) : []
+      }));
+
+      res.json(agentsWithStoreIds);
+
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Server error' });
@@ -17,10 +35,16 @@ module.exports = {
   // Add new agent
   addAgent: async (req, res) => {
     try {
-      const { store_id, name, email, password } = req.body;
+      const { store_ids, name, email, password } = req.body;
 
-      // Hash password
-      const hashedPassword = password ; //await bcrypt.hash(password, 10);
+      // Check for existing user
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Hash password if needed
+      const hashedPassword = password; // await bcrypt.hash(password, 10);
 
       // Create agent
       const agent = await User.create({
@@ -28,10 +52,17 @@ module.exports = {
         email,
         password: hashedPassword,
         role: 'agent',
-        store_id: store_id || null,
       });
 
-      res.status(201).json(agent);
+      // Assign multiple stores
+      if (store_ids && store_ids.length) {
+        await agent.setStores(store_ids); // automatically inserts into pivot table
+      }
+
+      // Fetch agent with assigned stores
+      const agentWithStores = await User.findByPk(agent.id, { include: Store });
+      res.status(201).json(agentWithStores);
+
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Server error' });
@@ -42,26 +73,31 @@ module.exports = {
   updateAgent: async (req, res) => {
     try {
       const { id } = req.params;
-      const { store_id, name, email, password } = req.body;
+      const { store_ids, name, email, password } = req.body;
 
       const agent = await User.findByPk(id);
-
       if (!agent) return res.status(404).json({ message: 'Agent not found' });
 
+      // Update basic info
       agent.name = name ?? agent.name;
       agent.email = email ?? agent.email;
-      agent.store_id = store_id ?? agent.store_id;
-
-      if (password) {
-        agent.password = password; //await bcrypt.hash(password, 10);
-      }
+      if (password) agent.password = password; // await bcrypt.hash(password, 10);
 
       await agent.save();
 
-      res.json(agent);
+      // Update store assignments
+      if (store_ids && Array.isArray(store_ids)) {
+        await agent.setStores(store_ids); // replaces existing store relations
+      }
+
+      // Fetch updated agent with stores
+      const updatedAgent = await User.findByPk(agent.id, { include: Store });
+      res.json(updatedAgent);
+
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Server error' });
     }
   },
+
 };

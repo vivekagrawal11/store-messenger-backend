@@ -1,6 +1,6 @@
 const WhatsappMessage = require("../models/whatsappMessage.model");
 const Conversation = require("../models/conversation.model");
-const User = require("../models/user.model");
+const { User, Store} = require("../models");
 const { Op } = require("sequelize");
 
 class ChatService {
@@ -31,12 +31,22 @@ class ChatService {
       };
 
       if (role === "agent") {
-        // Fetch the user's store_id
-        const user = await User.findByPk(userId);
-        if (!user || !user.store_id) {
-          return []; // If agent has no store, return empty list
+        // Fetch the stores assigned to this agent
+        const user = await User.findByPk(userId, {
+          include: {
+            model: Store,
+            attributes: ['id'], // only need IDs
+            through: { attributes: [] } // remove pivot fields
+          }
+        });
+
+        if (!user || !user.Stores || !user.Stores.length) {
+          return []; // No stores assigned
         }
-        whereCondition.store_id = user.store_id; // Filter by store
+
+        // Extract store IDs
+        const storeIds = user.Stores.map(store => store.id);
+        whereCondition.store_id = { [Op.in]: storeIds }; // filter conversations by multiple stores
       }
 
       // For super_admin → no store filter, fetch all open conversations
@@ -50,6 +60,7 @@ class ChatService {
       throw new Error("Failed to fetch conversations");
     }
   }
+
 }
 
 module.exports = new ChatService();
