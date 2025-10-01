@@ -12,7 +12,7 @@ exports.createStore = async (req, res) => {
 exports.getStores = async (req, res) => {
   try {
     const stores = await Store.findAll({
-      attributes: ["id", "name","city","address","phone_number"] // only send id and name for dropdown
+      attributes: ["id", "name","city","address","phone_number","no_of_agents"] // only send id and name for dropdown
     });
     res.json(stores);
   } catch (error) {

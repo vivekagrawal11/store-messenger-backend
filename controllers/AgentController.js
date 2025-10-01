@@ -1,5 +1,6 @@
 const { User, Store } = require("../models"); // Import models from index.js
 const bcrypt = require('bcrypt');
+const ConfigService = require("../services/config.service");
 
 module.exports = {
 
@@ -27,7 +28,6 @@ module.exports = {
       res.json(agentsWithStoreIds);
 
     } catch (err) {
-      console.error(err);
       res.status(500).json({ message: 'Server error' });
     }
   },
@@ -36,11 +36,22 @@ module.exports = {
   addAgent: async (req, res) => {
     try {
       const { store_ids, name, email, password } = req.body;
+      if (!store_ids || !Array.isArray(store_ids) || store_ids.length === 0) {
+        for (const id of store_ids) {
+          const result = await ConfigService.allowToAddStore(id);
 
+          if (!result.allowed) {
+            return res.status(400).json({
+              message: `Store "${result.storeName}" has reached maximum capacity of ${result.maxAgents} agents.`,
+              type:"store"
+            });
+          }
+        }
+      }
       // Check for existing user
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
-        return res.status(400).json({ message: "Email already exists" });
+        return res.status(400).json({ message: "Email already exists",type:"email" });
       }
 
       // Hash password if needed
@@ -74,7 +85,17 @@ module.exports = {
     try {
       const { id } = req.params;
       const { store_ids, name, email, password } = req.body;
-
+      if (store_ids || Array.isArray(store_ids) || store_ids.length != 0) {
+        for (const id of store_ids) {
+          const result = await ConfigService.allowToAddStore(id);
+          if (!result.allowed) {
+            return res.status(400).json({
+              message: `Store "${result.storeName}" has reached maximum capacity of ${result.maxAgents} agents.`,
+              type:"store"
+            });
+          }
+        }
+      }
       const agent = await User.findByPk(id);
       if (!agent) return res.status(404).json({ message: 'Agent not found' });
 

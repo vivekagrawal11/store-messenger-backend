@@ -2,6 +2,7 @@ const WhatsappMessage = require("../models/whatsappMessage.model");
 const Conversation = require("../models/conversation.model");
 const { User, Store} = require("../models");
 const { Op } = require("sequelize");
+const ConfigService = require("./config.service");
 
 class ChatService {
   async saveMessage({ conversation_id, store_id,content,direction='out',customer_id,agent_id, sender_type = "agent"}) {
@@ -29,8 +30,9 @@ class ChatService {
           [Op.ne]: "closed" // Exclude closed conversations
         }
       };
+      const allowAccessToAggent = await ConfigService.getConfigValue('GLOBAL_ACCESS');
+      if (role === "agent" && allowAccessToAggent == 'no') {
 
-      if (role === "agent") {
         // Fetch the stores assigned to this agent
         const user = await User.findByPk(userId, {
           include: {

@@ -18,6 +18,7 @@ const Store = sequelize.define("Store", {
   config: { type: DataTypes.JSON, allowNull: true },
   latitude: { type: DataTypes.DECIMAL(10, 8), allowNull: true },
   longitude: { type: DataTypes.DECIMAL(11, 8), allowNull: true },
+  no_of_agents: { type: DataTypes.TINYINT, allowNull: false, defaultValue: 0 },
   created_at: { type: DataTypes.DATE, allowNull: true, defaultValue: DataTypes.NOW },
   updated_at: { type: DataTypes.DATE, allowNull: true, defaultValue: DataTypes.NOW },
   deleted_at: { type: DataTypes.DATE, allowNull: true },
